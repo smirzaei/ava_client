@@ -2,6 +2,9 @@
 
 import logging
 import json
+import struct
+from dataclasses import dataclass, asdict
+
 LOG_FORMAT = "%(asctime)s - [%(levelname)s] %(message)s"
 logging.basicConfig(format=LOG_FORMAT)
 logging.getLogger().setLevel(logging.INFO)
@@ -9,43 +12,69 @@ logging.getLogger().setLevel(logging.INFO)
 from socket import socket, AF_INET, SOCK_STREAM
 logger = logging.getLogger(__name__)
 
-HOST_ADDRESS = "192.168.11.124"
-N_NUMBER_BITS = 32
+HOST_ADDRESS = "192.168.11.141"
 PORT = 8080
 
-sock = socket(AF_INET, SOCK_STREAM)
-sock.connect((HOST_ADDRESS, PORT))
+@dataclass
+class Request:
+     m: str
+     i: str
+     t: str
+
+     def to_json(self) -> str:
+          return json.dumps(asdict(self))
+
+def cleanup_json(json: str) -> str:
+     escape_characters = ["\n", "\r", "\t", "\x00"]
+     for e in escape_characters:
+          json = json.strip(e)
+
+     return json
+
+class Client:
+     def __init__(self, host: str, port: int) -> None:
+          self.host = host
+          self.port = port
+
+          self.sock = socket(AF_INET, SOCK_STREAM)
+          self.sock.connect((HOST_ADDRESS, PORT))
+
+          self.send_auth_msg()
+
+     def send_auth_msg(self) -> None:
+          req = Request("Python", "me", "aut")
+          self.send_request(req)
+
+     def send_user_input(self, user_input: str) -> None:
+          logger.info(f"Send user input: {user_input}")
+          req = Request(user_input, "me", "txt")
+          self.send_request(req)
+          res = self.read_response()
+
+          print(json.loads(res))
+
+     def send_request(self, req: Request) -> None:
+          msg_json = req.to_json().replace('"', '\"')
+          msg_len = len(msg_json)
+          msg_len_little_endian = struct.pack("<I", msg_len)
+          logger.info(f"Sending {msg_json} - length: {msg_len_little_endian}")
+
+          self.sock.sendall(msg_len_little_endian)
+          self.sock.sendall(msg_json.encode("UTF-8"))
+
+     def read_response(self) -> str:
+          logger.info("Waiting for response.")
+          msg_len = int.from_bytes(self.sock.recv(4), "little")
+          logger.info(f"Response is {msg_len} bytes in length.")
+
+          msg = self.sock.recv(msg_len)
+          logger.info(f"Response is: {msg}")
+
+          return cleanup_json(msg.decode("UTF-8").strip())
 
 
-def get_bin(num: int) -> bytes:
-     b3 = (num & 0xff000000)
-     b2 = (num & 0x00ff0000)
-     b1 = (num & 0x0000ff00)
-     b0 = (num & 0x000000ff)
-
-     return bytes([b0, b1, b2, b3])
+client = Client(HOST_ADDRESS, PORT)
 
 while True:
      user_input = input("Enter a text: ")
-     msg = { "m": user_input, "i":"me", "t":"txt" }
-
-     json_payload = json.dumps(msg).replace('"', '\"')
-     print(json_payload)
-
-     text_len = len(json_payload)
-     text_len_bin = get_bin(text_len)
-
-     logger.info(f"Text length is: {text_len}. Binary: {text_len_bin}")
-     logger.info(f"Send {text_len_bin} to the socket.")
-     sock.sendall(text_len_bin)
-
-     logger.info("Sending the text.")
-     sock.sendall(json_payload.encode("utf-8"))
-
-     msg_length = int.from_bytes(sock.recv(4), "little")
-     logger.info(f"Received message is {msg_length} bytes in length.")
-
-     response = json.loads(sock.recv(msg_length).decode("UTF-8"))
-     logger.info(F"Response is: {response}")
-
-     print(response["m"])
+     client.send_user_input(user_input)
