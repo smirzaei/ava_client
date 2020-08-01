@@ -4,6 +4,10 @@ import logging
 import json
 import struct
 from dataclasses import dataclass, asdict
+from gtts import gTTS 
+import pygame
+language = "en"
+
 
 LOG_FORMAT = "%(asctime)s - [%(levelname)s] %(message)s"
 logging.basicConfig(format=LOG_FORMAT)
@@ -12,7 +16,7 @@ logging.getLogger().setLevel(logging.INFO)
 from socket import socket, AF_INET, SOCK_STREAM
 logger = logging.getLogger(__name__)
 
-HOST_ADDRESS = "192.168.11.141"
+HOST_ADDRESS = "192.168.1.75"
 PORT = 8080
 
 @dataclass
@@ -40,19 +44,29 @@ class Client:
           self.sock.connect((HOST_ADDRESS, PORT))
 
           self.send_auth_msg()
+          
+          pygame.mixer.init()
 
      def send_auth_msg(self) -> None:
           req = Request("Python", "me", "aut")
           self.send_request(req)
-
+    
      def send_user_input(self, user_input: str) -> None:
           logger.info(f"Send user input: {user_input}")
           req = Request(user_input, "me", "txt")
           self.send_request(req)
           res = self.read_response()
+          res_parsed = json.loads(res)
+          reply = res_parsed['m'].replace("'", ' " ')
+          reply_parsed = json.loads(reply)
+          print(reply['type'])       
+     #     New function needed 
+     #     speech = gTTS(text = res_parsed['m'], lang = language, slow = False)
+     #     speech.save("text.mp3")
+     #     pygame.mixer.music.load("text.mp3")
+     #     pygame.mixer.music.play()
 
-          print(json.loads(res))
-
+          
      def send_request(self, req: Request) -> None:
           msg_json = req.to_json().replace('"', '\"')
           msg_len = len(msg_json)
@@ -78,3 +92,6 @@ client = Client(HOST_ADDRESS, PORT)
 while True:
      user_input = input("Enter a text: ")
      client.send_user_input(user_input)
+     
+     while pygame.mixer.music.get_busy() == True: 
+          continue
