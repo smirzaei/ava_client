@@ -4,6 +4,7 @@ import logging
 import json
 import struct
 from dataclasses import dataclass, asdict
+from vr import get_user_voice_input
 
 LOG_FORMAT = "%(asctime)s - [%(levelname)s] %(message)s"
 logging.basicConfig(format=LOG_FORMAT)
@@ -12,7 +13,7 @@ logging.getLogger().setLevel(logging.INFO)
 from socket import socket, AF_INET, SOCK_STREAM
 logger = logging.getLogger(__name__)
 
-HOST_ADDRESS = "192.168.11.141"
+HOST_ADDRESS = "192.168.11.142"
 PORT = 8080
 
 @dataclass
@@ -76,5 +77,6 @@ class Client:
 client = Client(HOST_ADDRESS, PORT)
 
 while True:
-     user_input = input("Enter a text: ")
+     # user_input = input("Enter a text: ")
+     user_input = get_user_voice_input()
      client.send_user_input(user_input)
