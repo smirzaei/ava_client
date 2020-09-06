@@ -73,10 +73,10 @@ class Client:
 
           return cleanup_json(msg.decode("UTF-8").strip())
 
+if __name__ == "__main__":
+     client = Client(HOST_ADDRESS, PORT)
 
-client = Client(HOST_ADDRESS, PORT)
-
-while True:
-     # user_input = input("Enter a text: ")
-     user_input = get_user_voice_input()
-     client.send_user_input(user_input)
+     while True:
+          # user_input = input("Enter a text: ")
+          user_input = get_user_voice_input()
+          client.send_user_input(user_input)
