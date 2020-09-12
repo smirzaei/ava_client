@@ -28,7 +28,6 @@ class Ava(Element):
 
     def put(self, data) -> None:
         if self.is_listening:
-            # self.chunks.append(data)
             self.chunks += bytearray(data)
 
     def start(self) -> None:

@@ -19,16 +19,12 @@ from voice_engine.channel_picker import ChannelPicker
 from voice_engine.kws import KWS
 from voice_engine.ns import NS
 from voice_engine.doa_respeaker_4mic_array import DOA
-from pixels import Pixels, pixels
-from alexa_led_pattern import AlexaLedPattern
+from pixels import pixels
 from google_home_led_pattern import GoogleHomeLedPattern
 import speech_recognition as sr
 from ava import Ava
 from concurrent.futures import ThreadPoolExecutor
 import wave
-
-# from vr import get_user_voice_input
-# from text_client import Client
 
 HOST_ADDRESS = "192.168.11.142"
 PORT = 8080
@@ -59,10 +55,7 @@ def main():
 
         with ThreadPoolExecutor(1) as executor:
             future = executor.submit(ava.listen)
-            result = future.result()
-            print(result)
-
-            listen_result = ava.listen()
+            listen_result = future.result()
 
             file_path = "/tmp/ava_tmp.wav"
             logger.info(f"Writing audio data to temp file. {file_path}")
@@ -89,7 +82,6 @@ def main():
 
             pixels.off()
 
-
     kws.on_detected = on_detected
 
     src.link(ch1)
@@ -108,7 +100,6 @@ def main():
             break
 
     src.recursive_stop()
-
 
 if __name__ == '__main__':
     main()
