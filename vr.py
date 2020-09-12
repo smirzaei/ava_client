@@ -9,8 +9,9 @@ def get_user_voice_input() -> str:
     speech = sr.Microphone(device_index=0)
     with speech as source:
         logger.info("say something...")
-        audio = r.adjust_for_ambient_noise(source)
+        r.adjust_for_ambient_noise(source)
         audio = r.listen(source)
+        r.recognize_google()
     try:
         recog = r.recognize_google(audio, language = 'en-US')
 

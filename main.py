@@ -23,13 +23,19 @@ from pixels import Pixels, pixels
 from alexa_led_pattern import AlexaLedPattern
 from google_home_led_pattern import GoogleHomeLedPattern
 import speech_recognition as sr
-from vr import get_user_voice_input
-from text_client import Client
+from ava import Ava
+import wave
+
+# from vr import get_user_voice_input
+# from text_client import Client
 
 HOST_ADDRESS = "192.168.11.142"
 PORT = 8080
 
-client = Client(HOST_ADDRESS, PORT)
+# client = Client(HOST_ADDRESS, PORT)
+
+logger = logging.getLogger(__name__)
+ava = Ava()
 
 def main():
     pixels.pattern = GoogleHomeLedPattern(show=pixels.show)
@@ -40,23 +46,63 @@ def main():
     ns = NS(rate=16000, channels=1)
     kws = KWS(model='avas.pmdl')
     doa = DOA(rate=16000)
-    #Speech recognition
+
     r = sr.Recognizer()
-    speech = sr.Microphone(device_index=2)
-    # alexa.state_listener.on_listening = pixels.listen
-    # alexa.state_listener.on_thinking = pixels.think
-    # alexa.state_listener.on_speaking = pixels.speak
-    # alexa.state_listener.on_finished = pixels.off
 
     def on_detected(keyword):
         direction = doa.get_direction()
-        logging.info('detected {} at direction {}'.format(keyword, direction))
+        logger.info('detected {} at direction {}'.format(keyword, direction))
         pixels.wakeup(direction)
         time.sleep(2)
-        pixels.listen(5)
+        pixels.listen()
+        listen_result = ava.listen()
 
-        user_input = get_user_voice_input()
-        client.send_user_input(user_input)
+        audio_data = sr.AudioData(listen_result, 16000, 1)
+
+        # r.adjust_for_ambient_noise()
+        # result = r.recognize_google(audio_data, language="en-US")
+        # logger.info(f"Google result: {result}")
+
+        file_path = "/tmp/ava_tmp.wav"
+        logger.info(f"Writing audio data to temp file. {file_path}")
+        with wave.open(file_path, mode="wb") as file:
+            file.setnchannels(1)
+            file.setsampwidth(2)
+            file.setframerate(16000)
+            file.writeframesraw(listen_result)
+
+        logger.info(f"Reading audio data from temp file {file_path}")
+        with sr.AudioFile(file_path) as file:
+            audio = r.record(file)
+
+            try:
+                logger.info("Sending audio data to google for recognition.")
+                recog = r.recognize_google(audio, language = 'en-US')
+
+                logger.info("You said: " + recog)
+                # client.send_user_input(user_input)
+            except sr.UnknownValueError:
+                logger.error("Google Speech Recognition could not understand audio")
+            except sr.RequestError as e:
+                logger.error("Could not request results from Google Speech Recognition service; {0}".format(e))
+
+
+        # logger.info("Adjusting for ambient noise")
+        # audio = r.adjust_for_ambient_noise(src)
+        # logger.info("Listening...")
+        # audio = r.listen(src)
+
+        # try:
+        #     recog = r.recognize_google(audio, language = 'en-US')
+
+        #     logger.info("You said: " + recog)
+        # except sr.UnknownValueError:
+        #     logger.error("Google Speech Recognition could not understand audio")
+        # except sr.RequestError as e:
+        #     logger.error("Could not request results from Google Speech Recognition service; {0}".format(e))
+
+#       user_input = get_user_voice_input()
+#        client.send_user_input(user_input)
 
         pixels.off()
 
@@ -64,11 +110,11 @@ def main():
     kws.on_detected = on_detected
 
     src.link(ch1)
+    src.link(doa)
+
     ch1.link(ns)
     ns.link(kws)
-
-
-    src.link(doa)
+    ns.link(ava)
 
     src.recursive_start()
 
