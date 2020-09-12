@@ -7,7 +7,6 @@ Requirement:
     pip install spidev
 """
 
-
 import time
 import logging
 LOG_FORMAT = "%(asctime)s - [%(levelname)s] %(message)s"
@@ -23,6 +22,7 @@ from pixels import pixels
 from google_home_led_pattern import GoogleHomeLedPattern
 import speech_recognition as sr
 from ava import Ava
+from text_client import Client
 from concurrent.futures import ThreadPoolExecutor
 import wave
 
